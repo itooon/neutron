@@ -17,14 +17,21 @@ import datetime
 from unittest import mock
 
 from neutron_lib import context
+from oslo_config import cfg
 from oslo_utils import timeutils
 
 from neutron.common.ovn import constants
 from neutron.common.ovn import exceptions
 from neutron.common.ovn import hash_ring_manager
+from neutron.conf.plugins.ml2.drivers.ovn import ovn_conf
 from neutron.db import ovn_hash_ring_db as db_hash_ring
 from neutron import service
 from neutron.tests.unit import testlib_api
+
+try:
+    ovn_conf.register_opts()
+except cfg.DuplicateOptError:
+    pass
 
 HASH_RING_TEST_GROUP = 'test_group'
 
@@ -155,3 +162,23 @@ class TestHashRingManager(testlib_api.SqlTestCaseLight):
             self.assertFalse(
                 self.hash_ring_manager._wait_startup_before_caching)
             self.assertFalse(get_nodes_mock.called)
+
+    def test__wait_startup_before_caching_disabled(self):
+        self.config(group='ovn', hash_ring_caching_enabled=False)
+        with mock.patch.object(hash_ring_manager.db_hash_ring,
+                               'get_active_nodes') as get_nodes_mock:
+            self.assertFalse(
+                self.hash_ring_manager._wait_startup_before_caching)
+            self.assertFalse(get_nodes_mock.called)
+
+    def test__load_hash_ring_no_caching(self):
+        self.config(group='ovn', hash_ring_caching_enabled=False)
+        with mock.patch.object(hash_ring_manager.db_hash_ring,
+                               'get_active_nodes', return_value=[]) as gn,
+            mock.patch.object(hash_ring_manager.db_hash_ring,
+                               'count_offline_nodes', return_value=0),
+            mock.patch.object(hash_ring_manager.hashring, 'HashRing') as hr:
+            self.hash_ring_manager._load_hash_ring()
+            self.hash_ring_manager._load_hash_ring()
+            self.assertEqual(2, gn.call_count)
+            self.assertEqual(2, hr.call_count)
