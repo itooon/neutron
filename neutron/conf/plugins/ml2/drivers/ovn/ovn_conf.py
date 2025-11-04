@@ -258,6 +258,11 @@ ovn_opts = [
                        'stateless, instead of using the conntrack OVN '
                        'actions. This strategy is faster in some '
                        'environments, like for example DPDK deployments.')),
+    cfg.BoolOpt('hash_ring_caching_enabled',
+                default=True,
+                help=_('Whether to cache the OVN hash ring in memory. Set to '
+                       'False to always read the hash ring state directly '
+                       'from the database.')), 
 ]
 
 nb_global_opts = [

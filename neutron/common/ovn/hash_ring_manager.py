@@ -15,6 +15,7 @@
 
 import datetime
 
+from oslo_config import cfg
 from oslo_log import log
 from oslo_utils import timeutils
 from tooz import hashring
@@ -43,6 +44,8 @@ class HashRingManager:
 
     @property
     def _wait_startup_before_caching(self):
+        if not cfg.CONF.ovn.hash_ring_caching_enabled:
+            return False
         # NOTE(lucasagomes): Some events are processed at the service's
         # startup time and since many services may be started concurrently
         # we do not want to use a cached hash ring at that point. This
@@ -75,6 +78,8 @@ class HashRingManager:
         return True
 
     def _load_hash_ring(self, refresh=False):
+        if not cfg.CONF.ovn.hash_ring_caching_enabled:
+            refresh = True
         cache_timeout = timeutils.utcnow() - datetime.timedelta(
             seconds=constants.HASH_RING_CACHE_TIMEOUT)
 
